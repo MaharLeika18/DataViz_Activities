@@ -92,7 +92,7 @@ LAYOUT_BASE = dict(
 # ── No more Colors ──
 @st.cache_data
 def load_data():
-    df = pd.read_csv(r"Final Project/Milestone_2.csv", parse_dates=["Date"])
+    df = pd.read_csv(r"C:/Users/Arrcann/Downloads/Main/Programming/DataViz_Lesson4/Final Project/Milestone_2.csv", parse_dates=["Date"])
     df = df.sort_values("Date").reset_index(drop=True)
     df.columns = [c.strip() for c in df.columns]
 
@@ -169,11 +169,7 @@ with st.sidebar:
         ["All (2024–2026)", "2024 Only", "2025 Only"],
         index=0,
     )
-    chart1_view = st.radio(
-        "Select Price View",
-        ["Normalized Price", "Raw Price (USD)", "Cumulative Returns (%)"],
-        index=0,
-    )
+
     st.markdown("---")
     st.markdown("## **About**")
     st.markdown(
@@ -195,7 +191,8 @@ st.markdown(
     '<p style="color:#22d3ee;font-family:monospace;font-size:11px;letter-spacing:0.15em;">MILESTONE 3 — NARRATIVE DASHBOARD</p>',
     unsafe_allow_html=True,
 )
-st.title("Does Bitcoin Lead the S&P 500?")
+st.title("FinTech Market Volatility Analyst")
+st.subheader("BTC vs S&P 500: Does Crypto Lead the Market?")
 st.markdown(
     f"**Period:** {df['Date'].iloc[0].strftime('%b %Y')} – {df['Date'].iloc[-1].strftime('%b %Y')} &nbsp;|&nbsp; "
     f"**Trading days:** {len(df)} &nbsp;|&nbsp; "
@@ -228,30 +225,12 @@ if chart1_view == "Normalized Price":
     y_spx = df["SPX"] / df["SPX"].iloc[0]
     y_label = "Index (1.0 = start)"
     title_c1 = "Normalized Price — Base = 1.0 at period start"
-elif chart1_view == "Raw Price (USD)":
-    y_btc = df["BTC"]
-    y_spx = df["SPX"]
-    y_label = "Price (USD)"
-    title_c1 = "Raw Closing Price (USD)"
 else:
     y_btc = (df["BTC_cum"] - 1) * 100
     y_spx = (df["SPX_cum"] - 1) * 100
     y_label = "Return (%)"
     title_c1 = "Cumulative Log-Returns (%)"
 
-if chart1_view == "Raw Price (USD)":
-    from plotly.subplots import make_subplots
-    fig1 = make_subplots(specs=[[{"secondary_y": True}]])
-    fig1.add_trace(go.Scatter(x=df["Date"], y=df["BTC"], name="Bitcoin (BTC)",
-        line=dict(color=BTC_COLOR, width=2)), secondary_y=False)
-    fig1.add_trace(go.Scatter(x=df["Date"], y=df["SPX"], name="S&P 500 (SPX)",
-        line=dict(color=SPX_COLOR, width=2)), secondary_y=True)
-    fig1.update_layout(**LAYOUT_BASE, title=title_c1, height=340)
-    fig1.update_yaxes(title_text="BTC Price (USD)", secondary_y=False,
-        gridcolor=GRID_COLOR, tickfont=dict(color=BTC_COLOR))
-    fig1.update_yaxes(title_text="SPX Price (USD)", secondary_y=True,
-        gridcolor=GRID_COLOR, tickfont=dict(color=SPX_COLOR))
-else:
     fig1 = go.Figure()
     fig1.add_trace(go.Scatter(x=df["Date"], y=y_btc, name="Bitcoin (BTC)",
         line=dict(color=BTC_COLOR, width=2), fill="tozeroy", fillcolor="rgba(247,147,26,0.06)"))
