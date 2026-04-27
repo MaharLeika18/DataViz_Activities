@@ -1,5 +1,5 @@
 # pip install streamlit plotly pandas numpy scipy statsmodels 
-# python streamlit run app.py
+# python -m streamlit run app.py
 
 
 import streamlit as st
