@@ -92,7 +92,7 @@ LAYOUT_BASE = dict(
 # ── No more Colors ──
 @st.cache_data
 def load_data():
-    df = pd.read_csv(r"Milestone_2.csv", parse_dates=["Date"])
+    df = pd.read_csv(r"Final Project/Milestone_2.csv", parse_dates=["Date"])
     df = df.sort_values("Date").reset_index(drop=True)
     df.columns = [c.strip() for c in df.columns]
 
