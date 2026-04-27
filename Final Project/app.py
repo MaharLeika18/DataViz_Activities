@@ -219,25 +219,15 @@ st.divider()
 # ── Chart 1 ──
 st.subheader("Price Performance: BTC vs S&P 500")
 
-# Define y_btc, y_spx regardless of view
-if chart1_view == "Normalized Price":
-    y_btc = df["BTC"] / df["BTC"].iloc[0]
-    y_spx = df["SPX"] / df["SPX"].iloc[0]
-    y_label = "Index (1.0 = start)"
-    title_c1 = "Normalized Price — Base = 1.0 at period start"
-else:
-    y_btc = (df["BTC_cum"] - 1) * 100
-    y_spx = (df["SPX_cum"] - 1) * 100
-    y_label = "Return (%)"
-    title_c1 = "Cumulative Log-Returns (%)"
+y_btc = df["BTC"] / df["BTC"].iloc[0]
+y_spx = df["SPX"] / df["SPX"].iloc[0]
 
-    fig1 = go.Figure()
-    fig1.add_trace(go.Scatter(x=df["Date"], y=y_btc, name="Bitcoin (BTC)",
-        line=dict(color=BTC_COLOR, width=2), fill="tozeroy", fillcolor="rgba(247,147,26,0.06)"))
-    fig1.add_trace(go.Scatter(x=df["Date"], y=y_spx, name="S&P 500 (SPX)",
-        line=dict(color=SPX_COLOR, width=2), fill="tozeroy", fillcolor="rgba(59,130,246,0.06)"))
-    fig1.update_layout(**LAYOUT_BASE, title=title_c1, yaxis_title=y_label, height=340)
-
+fig1 = go.Figure()
+fig1.add_trace(go.Scatter(x=df["Date"], y=y_btc, name="Bitcoin (BTC)",
+    line=dict(color=BTC_COLOR, width=2), fill="tozeroy", fillcolor="rgba(247,147,26,0.06)"))
+fig1.add_trace(go.Scatter(x=df["Date"], y=y_spx, name="S&P 500 (SPX)",
+    line=dict(color=SPX_COLOR, width=2), fill="tozeroy", fillcolor="rgba(59,130,246,0.06)"))
+fig1.update_layout(**LAYOUT_BASE, title="Normalized Price — Base = 1.0 at period start", yaxis_title="Index (1.0 = start)", height=340)
 st.plotly_chart(fig1, use_container_width=True)
 
 with st.expander("Show chart data"):
