@@ -261,9 +261,18 @@ else:
 
 st.plotly_chart(fig1, use_container_width=True)
 
+with st.expander("Show chart data"):
+    st.dataframe(
+        pd.DataFrame({
+            "Date": df["Date"],
+            "BTC": y_btc,
+            "SPX": y_spx
+        })
+    )
+
 st.markdown(
     '<div class="annotation-box"><b style="color:#22d3ee">Story:</b> '
-    "add better explanation</div>",
+    "BTC showed significant outperformance and had a volatile trajectory. In comparison, SPX's growth was steadier and more gradual, with smaller and smoother ups and downs. Whenever the broader market had bullish momentum, BTC tended to accelerate faster than SPX. Its peaks are higher and the slopes of its rises are steeper. But BTC was also more sensitive to market corrections, with deeper pullbacks than SPX. Despite its volatility, BTC remained broadly correlated with the general trend of SPX: both moved upward over time and had similar directional shifts.</div>",
     unsafe_allow_html=True,
 )
 
@@ -280,9 +289,15 @@ with col_a:
     fig2.add_trace(go.Scatter(x=df_vol["Date"], y=df_vol["SPX_vol"] * 100, name="SPX", line=dict(color=SPX_COLOR, width=1.5)))
     fig2.update_layout(**LAYOUT_BASE, yaxis_title="Daily Std Dev (%)", height=280)
     st.plotly_chart(fig2, use_container_width=True)
+    
+    with st.expander("Show chart data"):
+        st.dataframe(
+            df_vol[["Date", "BTC_vol", "SPX_vol"]]
+        )
+
     st.markdown(
         '<div class="annotation-box"><b style="color:#22d3ee">Story:</b> '
-        "add better explanation</div>",
+        "The 30-day rolling volatility highlights how BTC consistently experienced larger and more frequent fluctuations compared to SPX. BTC’s volatility spikes were sharper and more pronounced, reflecting its sensitivity to rapid market changes and shifts in sentiment. In contrast, SPX maintained a relatively stable volatility profile, with smaller and more gradual increases during periods of market stress. Despite these differences in magnitude, both assets showed periods where volatility increased simultaneously, suggesting that broader market conditions influenced the intensity of price movements in both BTC and SPX.</div>",
         unsafe_allow_html=True,
     )
 
@@ -295,9 +310,18 @@ with col_b:
     fig3.add_trace(go.Histogram(x=spx_rets * 100, nbinsx=60, name="SPX", marker_color=SPX_COLOR, opacity=0.6))
     fig3.update_layout(**LAYOUT_BASE, barmode="overlay", xaxis_title="Daily Log-Return (%)", yaxis_title="Count", height=280)
     st.plotly_chart(fig3, use_container_width=True)
+    
+    with st.expander("Show chart data"):
+        st.dataframe(
+            pd.DataFrame({
+                "BTC_ret_%": btc_rets * 100,
+                "SPX_ret_%": spx_rets * 100
+            })
+        )    
+
     st.markdown(
         '<div class="annotation-box"><b style="color:#22d3ee">Story:</b> '
-        "add better explanation</div>",
+        "The return distribution shows that BTC had a much wider spread of returns, indicating more frequent and extreme price movements in both directions. Its distribution is more dispersed, with heavier tails, reflecting a higher likelihood of large gains as well as sharp losses. In contrast, SPX’s returns are more tightly clustered around the center, suggesting more consistent and moderate daily changes. While both assets are centered near zero—indicating no strong daily bias upward or downward—BTC exhibits greater variability and risk. Despite this difference in dispersion, both distributions remain broadly symmetric, showing that positive and negative returns occur with similar frequency for each asset.</div>",
         unsafe_allow_html=True,
     )
 
@@ -317,9 +341,18 @@ fig4.add_vline(x=0, line_color="rgba(255,255,255,0.2)", line_width=1)
 fig4.update_layout(**LAYOUT_BASE, xaxis_title="Lag (days) — Negative: BTC leads SPX | Positive: SPX leads BTC", yaxis_title="Pearson r", height=300)
 st.markdown('<div class="chart-wrapper">', unsafe_allow_html=True)
 st.plotly_chart(fig4, use_container_width=True)
+
+with st.expander("Show chart data"):
+    st.dataframe(
+        pd.DataFrame({
+            "Lag": lags,
+            "Correlation": corrs
+        })
+    )
+
 st.markdown(
     '<div class="annotation-box"><b style="color:#22d3ee">Story:</b> '
-    "add better explanation</div>",
+    "The cross-correlation function shows how the relationship between BTC and SPX changes when one is shifted forward or backward in time. The strongest correlations are centered around zero lag, indicating that both assets generally move at the same time rather than one consistently leading the other. While there are slight increases in correlation at certain positive or negative lags, these are relatively small and do not suggest a strong or persistent lead–lag effect. This implies that BTC and SPX tend to react to market conditions simultaneously, with no clear evidence that one systematically drives the movements of the other over the observed period.</div>",
     unsafe_allow_html=True,
 )
 
@@ -423,9 +456,19 @@ if quarters[selected_q] is not None:
         )
 
 st.plotly_chart(fig5, use_container_width=True)
+
+with st.expander("Show chart data"):
+    st.dataframe(
+        pd.DataFrame({
+            "Date": df7["Date"],
+            "BTC_abs_ret_%": df7["BTC_ret"].abs() * 100,
+            "SPX_abs_ret_%": df7["SPX_ret"].abs() * 100
+        })
+    )
+
 st.markdown(
     '<div class="annotation-box"><b style="color:#22d3ee">Story:</b> '
-    "add better explanation</div>",
+    "The distribution of absolute returns highlights a clear difference in volatility between BTC and SPX. BTC exhibits significantly larger absolute movements, indicating that substantial price changes occur more frequently regardless of direction. Its values are more widely spread, reflecting a higher level of market intensity and variability. In contrast, SPX shows smaller and more concentrated absolute returns, suggesting that large daily fluctuations are less common and price movements tend to remain moderate. While both assets experience periods of heightened activity, BTC consistently demonstrates stronger magnitude in its movements, reinforcing its characterization as the more volatile asset compared to the relatively stable behavior of SPX.</div>",
     unsafe_allow_html=True,
 )
 
@@ -442,6 +485,7 @@ st.markdown(
     "BTC is best characterized as a <i>high-beta risk asset</i> that amplifies macro moves, "
     "not a leading indicator for equity markets. "
     "Investors seeking to use crypto to predict stocks find <b>no robust predictive signal</b> in this data."
+    "<br><br>The overall results show that while BTC and SPX tend to move together at times, there is no clear lead-lag relationship between them. BTC experiences larger and more frequent price swings, but these movements do not help predict future changes in the stock market. The correlation observed between the two is mainly happening at the same time, suggesting that both are reacting to the same broader economic factors rather than influencing each other. This is further supported by the lack of meaningful results from lagged analysis, where past BTC returns do not explain future SPX performance. Overall, BTC behaves more like a highly volatile asset that responds to market conditions alongside equities, rather than acting as a signal for where the stock market will move next."
     "</div>",
     unsafe_allow_html=True,
 )
