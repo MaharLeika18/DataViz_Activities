@@ -19,24 +19,24 @@ st.set_page_config(
 st.markdown("""
 <style>
     [data-testid="stSidebar"] {
-    background-color: rgba(34, 211, 238, 0.07);
-    border-right: 1px solid rgba(34, 211, 238, 0.2);
-}
+        background-color: rgba(34, 211, 238, 0.07);
+        border-right: 1px solid rgba(34, 211, 238, 0.2);
+    }
     div[data-testid="stRadio"] label {
-    color: #94a3b8 !important;
-}
+        color: #94a3b8 !important;
+    }
 
-div[data-testid="stRadio"] label:has(input:checked) {
-    color: #22d3ee !important;
-}
+    div[data-testid="stRadio"] label:has(input:checked) {
+        color: #22d3ee !important;
+    }
 
-div[data-testid="stRadio"] label > div:first-child {
-    border: 1px solid #22d3ee !important;
-}
+    div[data-testid="stRadio"] label > div:first-child {
+        border: 1px solid #22d3ee !important;
+    }
 
-div[data-testid="stRadio"] label:has(input:checked) > div:first-child {
-    background-color: rgba(34, 211, 238, 0.15) !important;
-}
+    div[data-testid="stRadio"] label:has(input:checked) > div:first-child {
+        background-color: rgba(34, 211, 238, 0.15) !important;
+    }
     .stApp { background-color: #0a0e1a; }
     .block-container { padding-top: 1.5rem; padding-bottom: 2rem; }
     h1, h2, h3 { color: #f1f5f9; font-family: Georgia, serif; }
