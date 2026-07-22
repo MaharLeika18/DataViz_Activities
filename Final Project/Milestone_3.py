@@ -66,6 +66,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# ── Colors ──
 BTC_COLOR   = "#3b82f6"
 SPX_COLOR   = "#f7931a"
 ACCENT      = "#22d3ee"
@@ -86,7 +87,7 @@ LAYOUT_BASE = dict(
 
 @st.cache_data
 def load_data():
-    df = pd.read_csv(r"Final Project/Milestone_2.csv", parse_dates=["Date"])
+    df = pd.read_csv(r"Final Project/Milestone_3.py", parse_dates=["Date"])
     df = df.sort_values("Date").reset_index(drop=True)
     df.columns = [c.strip() for c in df.columns]
 
