@@ -1,0 +1,13 @@
+transaction_id,cust_name,region,order_date,amount_paid,status
+1001,Juan Dela Cruz,NCR,2026-07-01,1500.50,Completed
+1002,Maria Santos,Metro Manila,2026/07/02,2400.00,Completed
+1003,,ncr,2026-07-02,450.00,Cancelled
+1004,Pedro Penduko,CALABARZON,2026/07/03,,Completed
+1005,Ana Roces,calabarzon,2026-07-04,3100.25,Completed
+1001,Juan Dela Cruz,NCR,2026-07-01,1500.50,Completed
+1006,Jose Rizal,Region IV-A,2026/07/05,1200.00,Returned
+1007,Cardo Dalisay,Metro Manila,2026-07-05,,Completed
+1008,,ncr,2026/07/06,850.75,Completed
+1005,Ana Roces,calabarzon,2026-07-04,3100.25,Completed
+1009,Manny Pacquiao,CALABARZON,2026-07-06,5000.00,Completed
+1010,Catriona Gray,NCR,2026/07/07,1850.00,Cancelled
