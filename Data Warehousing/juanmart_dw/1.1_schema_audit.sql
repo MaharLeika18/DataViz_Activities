@@ -1,24 +1,46 @@
-DROP TABLE IF EXISTS juanmart_sales CASCADE;
+DROP TABLE IF EXISTS fact_sales CASCADE;
+DROP TABLE IF EXISTS dim_customer CASCADE;
+DROP TABLE IF EXISTS dim_date CASCADE;
+DROP TABLE IF EXISTS dim_region CASCADE;
+DROP TABLE IF EXISTS dim_status CASCADE;
 
-CREATE TABLE juanmart_sales (
-    transaction_id INT PRIMARY KEY NOT NULL,
-    cust_name VARCHAR(100) NOT NULL,
-    region VARCHAR(100) NOT NULL,
-    order_date DATE NOT NULL,
-    amount_paid FLOAT(10,2) NOT NULL,
-    status VARCHAR(20) NOT NULL
+CREATE TABLE dim_customer (
+    cust_id INT AUTO_INCREMENT PRIMARY KEY,
+    cust_name VARCHAR(100) NOT NULL UNIQUE
 );
 
-INSERT INTO juanmart_sales
-    (transaction_id, cust_name, region, order_date, amount_paid, status)
-VALUES
-    (1001, 'Juan Dela Cruz',  'National Capital Region', '2026-07-01', 1500.50, 'Completed'),
-    (1002, 'Maria Santos',    'National Capital Region', '2026-07-02', 2400.00, 'Completed'),
-    (1003, 'Unknown',         'National Capital Region', '2026-07-02', 450.00,  'Cancelled'),
-    (1004, 'Pedro Penduko',   'Region IV-A',              '2026-07-03', 1675.25, 'Completed'),
-    (1005, 'Ana Roces',       'Region IV-A',              '2026-07-04', 3100.25, 'Completed'),
-    (1006, 'Jose Rizal',      'Region IV-A',              '2026-07-05', 1200.00, 'Returned'),
-    (1007, 'Cardo Dalisay',   'National Capital Region', '2026-07-05', 1675.25, 'Completed'),
-    (1008, 'Unknown',         'National Capital Region', '2026-07-06', 850.75,  'Completed'),
-    (1009, 'Manny Pacquiao',  'Region IV-A',              '2026-07-06', 5000.00, 'Completed'),
-    (1010, 'Catriona Gray',   'National Capital Region', '2026-07-07', 1850.00, 'Cancelled');
+CREATE TABLE dim_region (
+    region_id INT AUTO_INCREMENT PRIMARY KEY,
+    region_name VARCHAR(100) NOT NULL UNIQUE
+);
+
+CREATE TABLE dim_date (
+    date_id INT PRIMARY KEY,         
+    full_date DATE NOT NULL UNIQUE,
+    day INT NOT NULL,
+    month INT NOT NULL,
+    month_name VARCHAR(20) NOT NULL,
+    quarter INT NOT NULL,
+    year INT NOT NULL,
+    day_of_week VARCHAR(10) NOT NULL,
+    is_weekend BOOLEAN NOT NULL
+);
+
+CREATE TABLE dim_status (
+    status_id INT AUTO_INCREMENT PRIMARY KEY,
+    status_name VARCHAR(20) NOT NULL UNIQUE
+);
+
+CREATE TABLE fact_sales (
+    transaction_id INT PRIMARY KEY,
+    cust_id INT NOT NULL,
+    region_id INT NOT NULL,
+    date_id INT NOT NULL,
+    status_id INT NOT NULL,
+    amount_paid FLOAT(10,2) NOT NULL,
+
+    CONSTRAINT fk_fact_customer FOREIGN KEY (cust_id) REFERENCES dim_customer(cust_id),
+    CONSTRAINT fk_fact_region   FOREIGN KEY (region_id) REFERENCES dim_region(region_id),
+    CONSTRAINT fk_fact_date     FOREIGN KEY (date_id) REFERENCES dim_date(date_id),
+    CONSTRAINT fk_fact_status   FOREIGN KEY (status_id) REFERENCES dim_status(status_id)
+);
