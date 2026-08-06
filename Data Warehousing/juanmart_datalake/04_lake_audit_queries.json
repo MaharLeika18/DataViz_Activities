@@ -1,0 +1,303 @@
+{
+  "_meta": {
+    "description": "MQL aggregation pipelines for profiling raw, unvalidated JSON payloads landed in the JuanMart Data Lake landing zone. Intended to run against raw_pos_events, raw_mobile_webhooks, and raw_logistics_events.",
+    "target_field": "payload",
+    "usage": "Load a pipeline array with json.load() in Python and pass directly to collection.aggregate(pipeline), or paste into mongosh as db.<collection>.aggregate(<pipeline>).",
+    "generated": "2026-08-06"
+  },
+  "queries": [
+    {
+      "id": "field_presence_frequency",
+      "purpose": "Counts how many documents contain each top-level field inside `payload`, and expresses it as a percentage of total documents. Reveals which vendor fields are consistently present vs. sporadic/optional.",
+      "target_collection_example": "raw_pos_events",
+      "pipeline": [
+        { "$project": { "fields": { "$objectToArray": "$payload" } } },
+        { "$unwind": "$fields" },
+        {
+          "$group": {
+            "_id": "$fields.k",
+            "count": { "$sum": 1 }
+          }
+        },
+        {
+          "$lookup": {
+            "from": "raw_pos_events",
+            "pipeline": [{ "$count": "total" }],
+            "as": "totals"
+          }
+        },
+        { "$unwind": "$totals" },
+        {
+          "$project": {
+            "field": "$_id",
+            "_id": 0,
+            "present_count": "$count",
+            "total_documents": "$totals.total",
+            "presence_pct": {
+              "$round": [
+                { "$multiply": [{ "$divide": ["$count", "$totals.total"] }, 100] },
+                2
+              ]
+            }
+          }
+        },
+        { "$sort": { "presence_pct": -1 } }
+      ]
+    },
+    {
+      "id": "field_type_distribution",
+      "purpose": "For each field, shows every BSON type observed across all documents and how many times each type occurred. Directly surfaces type drift, e.g. `amount` arriving as both a double and a string across different vendor payload versions.",
+      "target_collection_example": "raw_pos_events",
+      "pipeline": [
+        { "$project": { "fields": { "$objectToArray": "$payload" } } },
+        { "$unwind": "$fields" },
+        {
+          "$group": {
+            "_id": {
+              "field": "$fields.k",
+              "bson_type": { "$type": "$fields.v" }
+            },
+            "count": { "$sum": 1 }
+          }
+        },
+        {
+          "$group": {
+            "_id": "$_id.field",
+            "type_breakdown": {
+              "$push": { "type": "$_id.bson_type", "count": "$count" }
+            },
+            "distinct_type_count": { "$sum": 1 }
+          }
+        },
+        { "$match": { "distinct_type_count": { "$gt": 1 } } },
+        { "$sort": { "distinct_type_count": -1 } },
+        {
+          "$project": {
+            "_id": 0,
+            "field": "$_id",
+            "distinct_type_count": 1,
+            "type_breakdown": 1
+          }
+        }
+      ],
+      "note": "The $match stage filters to fields with MORE THAN ONE observed type -- these are your schema drift hotspots. Remove the $match to see the full type map for every field."
+    },
+    {
+      "id": "missing_required_keys",
+      "purpose": "Flags documents missing any field from a known list of business-critical keys (e.g. terminal_id, amount, timestamp for POS). Edit `required_keys` to match the expected contract per source.",
+      "target_collection_example": "raw_pos_events",
+      "required_keys": ["terminal_id", "amount", "currency", "timestamp"],
+      "pipeline": [
+        {
+          "$project": {
+            "_ingest": 1,
+            "missing_keys": {
+              "$filter": {
+                "input": ["terminal_id", "amount", "currency", "timestamp"],
+                "as": "key",
+                "cond": {
+                  "$not": [{ "$in": ["$$key", { "$map": { "input": { "$objectToArray": "$payload" }, "as": "f", "in": "$$f.k" } }] }]
+                }
+              }
+            }
+          }
+        },
+        { "$match": { "missing_keys.0": { "$exists": true } } },
+        {
+          "$group": {
+            "_id": "$missing_keys",
+            "affected_doc_count": { "$sum": 1 },
+            "sample_ingest_batches": { "$addToSet": "$_ingest.ingest_batch" }
+          }
+        },
+        { "$sort": { "affected_doc_count": -1 } },
+        { "$limit": 25 }
+      ]
+    },
+    {
+      "id": "date_field_format_variance",
+      "purpose": "Detects inconsistent date representations in a known date-bearing field (e.g. `timestamp`). Buckets documents by BSON type (string vs. date vs. number/epoch) since inconsistent date formats are usually strings-vs-Date-vs-epoch-int rather than differing string patterns, which BSON $type alone can't distinguish.",
+      "target_collection_example": "raw_logistics_events",
+      "target_date_field": "timestamp",
+      "pipeline": [
+        {
+          "$project": {
+            "date_bson_type": { "$type": "$payload.timestamp" },
+            "raw_value_sample": "$payload.timestamp"
+          }
+        },
+        {
+          "$group": {
+            "_id": "$date_bson_type",
+            "count": { "$sum": 1 },
+            "sample_values": { "$push": "$raw_value_sample" }
+          }
+        },
+        {
+          "$project": {
+            "_id": 0,
+            "bson_type": "$_id",
+            "count": 1,
+            "sample_values": { "$slice": ["$sample_values", 5] }
+          }
+        },
+        { "$sort": { "count": -1 } }
+      ],
+      "note": "Run this per known date field (timestamp, delivery_eta, scan_time, etc.). If bson_type comes back as 'string' with high count, follow up with the 'date_string_pattern_breakdown' query below to see the actual string formats."
+    },
+    {
+      "id": "date_string_pattern_breakdown",
+      "purpose": "For date values stored as strings, buckets them by a coarse structural pattern (digit/letter shape) to reveal concrete format drift, e.g. ISO8601 vs. MM/DD/YYYY vs. Unix-epoch-as-string, without needing an external regex library.",
+      "target_collection_example": "raw_mobile_webhooks",
+      "target_date_field": "event_time",
+      "pipeline": [
+        { "$match": { "payload.event_time": { "$type": "string" } } },
+        {
+          "$project": {
+            "original": "$payload.event_time",
+            "pattern": {
+              "$reduce": {
+                "input": { "$range": [0, { "$strLenCP": "$payload.event_time" }] },
+                "initialValue": "",
+                "in": {
+                  "$concat": [
+                    "$$value",
+                    {
+                      "$let": {
+                        "vars": { "ch": { "$substrCP": ["$payload.event_time", "$$this", 1] } },
+                        "in": {
+                          "$switch": {
+                            "branches": [
+                              { "case": { "$regexMatch": { "input": "$$ch", "regex": "[0-9]" } }, "then": "9" },
+                              { "case": { "$regexMatch": { "input": "$$ch", "regex": "[A-Za-z]" } }, "then": "A" }
+                            ],
+                            "default": "$$ch"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        {
+          "$group": {
+            "_id": "$pattern",
+            "count": { "$sum": 1 },
+            "examples": { "$addToSet": "$original" }
+          }
+        },
+        { "$project": { "_id": 0, "pattern_shape": "$_id", "count": 1, "examples": { "$slice": ["$examples", 3] } } },
+        { "$sort": { "count": -1 } }
+      ],
+      "warning": "This pipeline is CPU-intensive ($reduce over every character) -- run it on a $sample subset (see 'sampled_date_pattern_breakdown') for collections over ~1M documents rather than the full collection."
+    },
+    {
+      "id": "sampled_date_pattern_breakdown",
+      "purpose": "Same as date_string_pattern_breakdown but pre-filters with $sample to keep the expensive per-character pipeline cheap on large capped collections.",
+      "target_collection_example": "raw_pos_events",
+      "sample_size": 5000,
+      "pipeline": [
+        { "$sample": { "size": 5000 } },
+        { "$match": { "payload.timestamp": { "$type": "string" } } },
+        {
+          "$project": {
+            "original": "$payload.timestamp",
+            "pattern": {
+              "$reduce": {
+                "input": { "$range": [0, { "$strLenCP": "$payload.timestamp" }] },
+                "initialValue": "",
+                "in": {
+                  "$concat": [
+                    "$$value",
+                    {
+                      "$let": {
+                        "vars": { "ch": { "$substrCP": ["$payload.timestamp", "$$this", 1] } },
+                        "in": {
+                          "$switch": {
+                            "branches": [
+                              { "case": { "$regexMatch": { "input": "$$ch", "regex": "[0-9]" } }, "then": "9" },
+                              { "case": { "$regexMatch": { "input": "$$ch", "regex": "[A-Za-z]" } }, "then": "A" }
+                            ],
+                            "default": "$$ch"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        { "$group": { "_id": "$pattern", "count": { "$sum": 1 }, "examples": { "$addToSet": "$original" } } },
+        { "$project": { "_id": 0, "pattern_shape": "$_id", "count": 1, "examples": { "$slice": ["$examples", 3] } } },
+        { "$sort": { "count": -1 } }
+      ]
+    },
+    {
+      "id": "null_and_empty_value_audit",
+      "purpose": "Counts, per field, how many documents have that field explicitly present but set to null, empty string, or empty object/array -- distinct from the field being absent entirely (covered by field_presence_frequency).",
+      "target_collection_example": "raw_mobile_webhooks",
+      "pipeline": [
+        { "$project": { "fields": { "$objectToArray": "$payload" } } },
+        { "$unwind": "$fields" },
+        {
+          "$match": {
+            "$expr": {
+              "$or": [
+                { "$eq": ["$fields.v", null] },
+                { "$eq": ["$fields.v", ""] },
+                { "$and": [{ "$isArray": "$fields.v" }, { "$eq": [{ "$size": "$fields.v" }, 0] }] }
+              ]
+            }
+          }
+        },
+        {
+          "$group": {
+            "_id": "$fields.k",
+            "null_or_empty_count": { "$sum": 1 }
+          }
+        },
+        { "$sort": { "null_or_empty_count": -1 } },
+        { "$project": { "_id": 0, "field": "$_id", "null_or_empty_count": 1 } }
+      ]
+    },
+    {
+      "id": "unprocessed_backlog_by_source",
+      "purpose": "Operational health check, not schema profiling: shows how many un-drained (_ingest.processed: false) documents exist per source_id and their oldest received_at, to catch ETL workers falling behind before capped-collection eviction silently drops data.",
+      "target_collection_example": "raw_pos_events",
+      "pipeline": [
+        { "$match": { "_ingest.processed": false } },
+        {
+          "$group": {
+            "_id": "$_ingest.source_id",
+            "backlog_count": { "$sum": 1 },
+            "oldest_received_at": { "$min": "$_ingest.received_at" },
+            "newest_received_at": { "$max": "$_ingest.received_at" }
+          }
+        },
+        { "$sort": { "backlog_count": -1 } },
+        {
+          "$project": {
+            "_id": 0,
+            "source_id": "$_id",
+            "backlog_count": 1,
+            "oldest_received_at": 1,
+            "newest_received_at": 1,
+            "backlog_age_minutes": {
+              "$divide": [
+                { "$subtract": ["$$NOW", "$oldest_received_at"] },
+                60000
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "top_level_key_count_distribution",
+      "purpose": "Groups documents by how many top-level keys their `payload` contains. A wide spread signals inconsistent payload shapes across vendor versions -- e.g. some POS terminals sending 8 fields, others sending 14.",
+      "target_collection_example":
