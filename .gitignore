@@ -2,3 +2,4 @@
 Data Warehousing/.gitignore
 .env
 Data Warehousing/juanmart_datalake/atlas-credentials.env
+Data Warehousing/juanmart_datalake/raw_ingest_lake.py
